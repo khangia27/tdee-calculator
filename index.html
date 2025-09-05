@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDEE Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold text-center mb-6">Tính TDEE & Kế hoạch Calo</h1>
+        <div id="input-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium">Tên</label>
+                <input type="text" id="name" class="w-full p-2 border rounded" placeholder="Nhập tên của bạn">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Giới tính</label>
+                <select id="gender" class="w-full p-2 border rounded">
+                    <option value="nam">Nam</option>
+                    <option value="nu">Nữ</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Tuổi</label>
+                <input type="number" id="age" class="w-full p-2 border rounded" placeholder="Nhập tuổi">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Chiều cao (cm)</label>
+                <input type="number" id="height" class="w-full p-2 border rounded" placeholder="Nhập chiều cao">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Cân nặng hiện tại (kg)</label>
+                <input type="number" id="currentWeight" class="w-full p-2 border rounded" placeholder="Nhập cân nặng">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Mức độ hoạt động</label>
+                <select id="activityLevel" class="w-full p-2 border rounded">
+                    <option value="ít vận động">Ít vận động (ngồi văn phòng)</option>
+                    <option value="nhẹ">Nhẹ (tập 1-3 ngày/tuần)</option>
+                    <option value="trung bình">Trung bình (tập 3-5 ngày/tuần)</option>
+                    <option value="nặng">Nặng (tập 6-7 ngày/tuần)</option>
+                    <option value="rất nặng">Rất nặng (tập 2 buổi/ngày)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Cân nặng mục tiêu (kg)</label>
+                <input type="number" id="targetWeight" class="w-full p-2 border rounded" placeholder="Nhập cân nặng mục tiêu">
+            </div>
+            <button onclick="calculateTDEE()" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Tính toán</button>
+        </div>
+        <div id="result" class="mt-6 hidden">
+            <h2 class="text-xl font-semibold mb-4">Kết quả cho <span id="resultName"></span></h2>
+            <p><strong>BMR:</strong> <span id="bmr"></span> calo/ngày</p>
+            <p><strong>TDEE:</strong> <span id="tdee"></span> calo/ngày</p>
+            <p><strong>Kế hoạch:</strong> <span id="plan"></span></p>
+            <p><strong>Calo cần thiết:</strong> <span id="calories"></span> calo/ngày</p>
+            <p><strong>Thời gian ước tính:</strong> <span id="time"></span></p>
+            <div class="mt-4">
+                <h3 class="font-semibold">Gợi ý bài tập:</h3>
+                <ul id="exercises" class="list-disc pl-5"></ul>
+            </div>
+            <p class="mt-4 text-sm text-gray-600">Lưu ý: Đây là ước tính. Hãy tham khảo bác sĩ hoặc chuyên gia dinh dưỡng.</p>
+        </div>
+    </div>
+
+    <script>
+        function calculateBMR(gender, weight, height, age) {
+            if (gender === 'nam') {
+                return 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+            } else if (gender === 'nu') {
+                return 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+            }
+            throw new Error("Giới tính không hợp lệ.");
+        }
+
+        function calculateTDEE(bmr, activityLevel) {
+            const multipliers = {
+                'ít vận động': 1.2,
+                'nhẹ': 1.375,
+                'trung bình': 1.55,
+                'nặng': 1.725,
+                'rất nặng': 1.9
+            };
+            return bmr * multipliers[activityLevel];
+        }
+
+        function calculateTimeAndCalories(currentWeight, targetWeight, tdee) {
+            const weightDiff = Math.abs(currentWeight - targetWeight);
+            const caloriesPerKg = 7700;
+            let dailyAdjustment, direction;
+
+            if (targetWeight < currentWeight) {
+                dailyAdjustment = 500;
+                direction = "giảm cân";
+            } else if (targetWeight > currentWeight) {
+                dailyAdjustment = 300;
+                direction = "tăng cân";
+            } else {
+                return { days: 0, calories: tdee, direction: "duy trì cân nặng" };
+            }
+
+            const totalCaloriesNeeded = weightDiff * caloriesPerKg;
+            const daysNeeded = totalCaloriesNeeded / dailyAdjustment;
+            const weeksNeeded = daysNeeded / 7;
+            const adjustedCalories = direction === "giảm cân" ? tdee - dailyAdjustment : tdee + dailyAdjustment;
+
+            return { days: daysNeeded, calories: adjustedCalories, direction, weeks: weeksNeeded };
+        }
+
+        function suggestExercises(direction) {
+            if (direction.includes("giảm")) {
+                return [
+                    "Cardio: Chạy bộ 30-45 phút/ngày, 3-5 lần/tuần để đốt calo.",
+                    "HIIT: Bài tập cường độ cao ngắt quãng, 20-30 phút.",
+                    "Bơi lội hoặc đạp xe: Đốt 400-600 calo/giờ."
+                ];
+            } else if (direction.includes("tăng")) {
+                return [
+                    "Tập tạ: Squat, deadlift, bench press, 3-4 lần/tuần.",
+                    "Ăn surplus protein: Kết hợp tập gym để tăng cơ.",
+                    "Yoga hoặc pilates: Cải thiện sức bền và cơ bắp."
+                ];
+            } else {
+                return ["Kết hợp cardio và strength training 3-4 lần/tuần."];
+            }
+        }
+
+        function calculateTDEE() {
+            const name = document.getElementById('name').value;
+            const gender = document.getElementById('gender').value;
+            const age = parseFloat(document.getElementById('age').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const currentWeight = parseFloat(document.getElementById('currentWeight').value);
+            const activityLevel = document.getElementById('activityLevel').value;
+            const targetWeight = parseFloat(document.getElementById('targetWeight').value);
+
+            if (!name || !age || !height || !currentWeight || !targetWeight) {
+                alert("Vui lòng nhập đầy đủ thông tin!");
+                return;
+            }
+
+            try {
+                const bmr = calculateBMR(gender, currentWeight, height, age);
+                const tdee = calculateTDEE(bmr, activityLevel);
+                const { days, calories, direction, weeks } = calculateTimeAndCalories(currentWeight, targetWeight, tdee);
+                const exercises = suggestExercises(direction);
+
+                document.getElementById('resultName').textContent = name;
+                document.getElementById('bmr').textContent = bmr.toFixed(2);
+                document.getElementById('tdee').textContent = tdee.toFixed(2);
+                document.getElementById('plan').textContent = direction;
+                document.getElementById('calories').textContent = calories.toFixed(2);
+                document.getElementById('time').textContent = days === 0 ? "Không cần thay đổi" : `${days.toFixed(0)} ngày (khoảng ${weeks.toFixed(1)} tuần)`;
+
+                const exerciseList = document.getElementById('exercises');
+                exerciseList.innerHTML = '';
+                exercises.forEach(ex => {
+                    const li = document.createElement('li');
+                    li.textContent = ex;
+                    exerciseList.appendChild(li);
+                });
+
+                document.getElementById('result').classList.remove('hidden');
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+    </script>
+</body>
+</html>
